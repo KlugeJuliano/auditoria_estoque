@@ -9,13 +9,4 @@ class Produtos {
       required this.complement,
       required this.description,
       required this.brand});
-
-  Map<String, dynamic> toMap() {
-    return {
-      'ean': ean,
-      'decription': description,
-      'complement': complement,
-      'brand': brand,
-    };
-  }
 }

@@ -1,5 +1,4 @@
-import 'package:auditoria/home_page.dart';
-import 'package:auditoria/model/produto.dart';
+import 'package:auditoria/pages/home_page.dart';
 import 'package:auditoria/repostiories/products_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +7,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ProdustRepository()),
+        ChangeNotifierProvider(create: (_) => ProductsRepository()),
       ],
       child: const MyApp(),
     ),

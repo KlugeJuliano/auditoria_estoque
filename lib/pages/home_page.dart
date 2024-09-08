@@ -1,7 +1,6 @@
-import 'package:auditoria/settings.dart';
+import 'package:auditoria/pages/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:barcode_scan2/barcode_scan2.dart';
-
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,22 +32,22 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       appBar: AppBar(
         title: const Text('Auditoria de Estoques'),
         centerTitle: true,
         actions: [
-          IconButton(onPressed: (){
-            Navigator.push(context,
-              MaterialPageRoute(builder: (context)=> SettingsPage(),
-              ),
-            );
-          },
+          IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
+              },
               icon: const Icon(Icons.settings))
         ],
       ),
@@ -71,17 +70,25 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Container(
                   height: 48,
-                  width: MediaQuery.sizeOf(context).width/1.4,
+                  width: MediaQuery.sizeOf(context).width / 1.4,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(25),
                   ),
                   padding: const EdgeInsets.all(2),
-                    child: Text(_barcode.isEmpty ? '000000000000 Adocante Adocyl' : _barcode,
-                      textAlign: TextAlign.center,),
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: _barcode.isEmpty
+                          ? 'Leia ou digite o código de barras'
+                          : _barcode,
+                    ),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                const SizedBox(width: 8,),
-                
+                const SizedBox(
+                  width: 8,
+                ),
                 Expanded(
                   child: TextField(
                     decoration: const InputDecoration(labelText: 'QTD'),
@@ -93,7 +100,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8,),
+            const SizedBox(
+              height: 8,
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
