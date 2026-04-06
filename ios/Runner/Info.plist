@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>O app usa a camera para registrar fotos da auditoria de estoque.</string>
 </dict>
 </plist>

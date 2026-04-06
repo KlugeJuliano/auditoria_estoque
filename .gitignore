@@ -1,83 +1,52 @@
-<<<<<<< HEAD
-# Gradle files
+# Gradle and build output
 .gradle/
 build/
+/build/
+/android/app/debug
+/android/app/profile
+/android/app/release
 
-# Local configuration file (sdk path, etc)
+# Local configuration
 local.properties
 
-# Log/OS Files
+# Logs and generated files
 *.log
-
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.apk
-output.json
-
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
-
-# Keystore files
-*.jks
-*.keystore
-
-# Google Services (e.g. APIs or Firebase)
-google-services.json
-
-# Android Profiling
-*.hprof
-=======
-# Miscellaneous
 *.class
-*.log
 *.pyc
 *.swp
+output.json
+app.*.symbols
+app.*.map.json
+
+# OS/editor files
 .DS_Store
 .atom/
-.buildlog/
 .history
 .svn/
-migrate_working_dir/
-
-# IntelliJ related
+.idea/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart/Pub
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Symbolication related
-app.*.symbols
+# Android specific
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.hprof
+google-services.json
+*.jks
+*.keystore
 
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
->>>>>>> f743966 (Inicializando o projeto)
-./android
-./web
-./windows
-./ios
+# Workspace/tooling
+.codex
+.codex/
