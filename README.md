@@ -1,281 +1,171 @@
-# 📦 Auditoria e Contagem de Estoque
+# Auditoria de Estoque
 
-Aplicativo mobile para contagem e auditoria de estoque, com foco em pequenas empresas, mercados e operações que precisam de agilidade e precisão.
+Aplicativo Flutter para contagem, auditoria e conferência de estoque em operação offline. O projeto atende cenários de lojas, mercados, mercearias e equipes que precisam importar uma base atual de produtos, registrar a contagem física e exportar um relatório de divergências.
 
----
+## Recursos
 
-## 🎯 Objetivo
+- Importação de produtos por CSV, TXT ou XLSX.
+- Cadastro rápido de produtos não encontrados durante a contagem.
+- Leitura de código de barras pela câmera.
+- Suporte a códigos de balança EAN-13 com prefixos `20` a `29`.
+- Contagem manual com quantidade informada pelo operador.
+- Comparação entre quantidade esperada e quantidade contada.
+- Checklist de auditoria, observações e anexos de fotos.
+- Histórico local de auditorias finalizadas.
+- Reexportação de auditorias já concluídas.
+- Exportação em CSV, TXT e XLSX.
+- Funcionamento offline com persistência local em SQLite.
 
-Facilitar o processo de contagem de estoque, permitindo:
+## Fluxo de Uso
 
-* Importar lista de produtos
-* Ler códigos de barras
-* Interpretar códigos de balança
-* Registrar contagens rapidamente
-* Identificar divergências
-* Exportar resultados
+1. Importe o cadastro atual de estoque do cliente em `Ajustes`.
+2. Inicie a contagem pela aba `Contagem`.
+3. Leia o código pela câmera ou digite o código manualmente.
+4. Informe a quantidade contada no campo `QTD`.
+5. Toque em `Adicionar` para registrar o item na sessão.
+6. Finalize a contagem para revisar divergências.
+7. Preencha checklist, observações e fotos, se necessário.
+8. Exporte o relatório em CSV, TXT ou XLSX.
 
----
+## Importação de Produtos
 
-## 👤 Usuários
+A importação aceita arquivos `.csv`, `.txt` e `.xlsx`. Para CSV e TXT, o delimitador é detectado automaticamente entre vírgula, ponto e vírgula e tabulação.
 
-* Pequenos comerciantes
-* Mercados e mercearias
-* Estoquistas
-* Auditores internos
+Colunas esperadas:
 
----
+| Coluna | Descrição | Obrigatória |
+| --- | --- | --- |
+| Código de barras | Identificador principal do produto | Sim |
+| Código interno | Código interno usado pelo cliente ou balança | Não |
+| Nome | Nome do produto | Sim |
+| Quantidade esperada | Estoque atual esperado | Não |
 
-## 📱 Tecnologias
+Exemplo com ponto e vírgula:
 
-* Flutter
-* Armazenamento local (Hive ou SQLite)
-* Câmera para leitura de código de barras
-
----
-
-## 🧩 Funcionalidades
-
----
-
-### 📥 Importação de Estoque
-
-* Importar produtos via:
-
-  * Excel (.xlsx)
-  * CSV / TXT
-* Campos:
-
-  * Código de barras
-  * Código interno
-  * Nome
-  * Quantidade esperada (opcional)
-
----
-
-### 📷 Leitura de Código de Barras
-
-* Uso da câmera do dispositivo
-* Leitura automática de:
-
-  * EAN-13
-  * EAN-8
-  * UPC
-
-#### Comportamento:
-
-* Ao escanear:
-
-  * Produto é localizado automaticamente
-  * Campo de contagem é preenchido/incrementado
-* Caso produto não exista:
-
-  * Possibilidade de cadastro rápido
-
----
-
-### ⚖️ Leitura de Código de Balança
-
-Suporte a códigos usados em balanças de mercado (ex: etiquetas de produtos pesáveis).
-
-#### Estrutura comum (exemplo EAN-13):
-
-* Prefixo (geralmente 20–29)
-* Código do produto
-* Peso ou valor embutido
-
-#### Exemplo:
-
-```
-2 12345 000750
+```csv
+codigo_barras;codigo_interno;nome;quantidade_esperada
+7891234567890;12345;Arroz Tipo 1;10,5
+7899876543210;67890;Feijao Carioca;24
 ```
 
-* 2 → indica balança
-* 12345 → código do produto
-* 000750 → peso (0.750 kg)
+Observações:
 
-#### Regras:
+- Arquivos com ou sem cabeçalho são aceitos.
+- Quantidades decimais podem usar vírgula ou ponto.
+- Produtos existentes são atualizados pelo código de barras.
+- Linhas sem código de barras ou sem nome são ignoradas.
 
-* Identificar automaticamente códigos de balança
-* Extrair:
+## Contagem e Scanner
 
-  * Código do produto
-  * Peso ou valor
-* Converter peso para quantidade (configurável)
+O scanner não registra quantidade automaticamente. Ao ler um produto, o app prepara o código no formulário. O operador deve conferir ou informar a quantidade e tocar em `Adicionar`.
 
----
+Esse comportamento evita lançamentos acidentais e permite contagens por caixa, fardo, peso ou qualquer unidade operacional usada pelo cliente.
 
-### 📦 Contagem de Estoque
+## Código de Balança
 
-* Contagem manual ou via scanner
-* Incremento automático ao escanear
-* Edição manual de quantidade
-* Status:
+O aplicativo interpreta códigos EAN-13 de balança com prefixos `20` a `29`.
 
-  * Conferido
-  * Pendente
+Formato interpretado:
 
----
+```text
+PP CCCCC QQQQQ D
+```
 
-### 📋 Auditoria (Opcional)
+- `PP`: prefixo da balança.
+- `CCCCC`: código interno do produto.
+- `QQQQQ`: peso em gramas, convertido para quilogramas.
+- `D`: dígito final do código.
 
-* Checklist
-* Perguntas (Sim / Não / N/A)
-* Observações
-* Fotos
+Exemplo:
 
----
+```text
+2012345007508
+```
 
-### 🕓 Histórico
+Resultado:
 
-* Registro de contagens
-* Visualização de detalhes
-* Revisão de divergências
+- Prefixo: `20`
+- Código interno: `12345`
+- Peso: `0.750`
 
----
+## Auditoria e Histórico
 
-### 📊 Relatórios
+Ao finalizar uma contagem, o aplicativo gera um relatório com todos os produtos importados e os itens contados que não estavam na base original. Cada item recebe quantidade esperada, quantidade contada, diferença e status.
 
-* Diferença entre esperado x contado
-* Percentual de divergência
-* Lista de inconsistências
+Auditorias finalizadas ficam disponíveis no histórico, com detalhe dos itens, checklist, observações, fotos anexadas e opção de reexportação.
 
----
+## Exportação
 
-### 📤 Exportação
+Formatos disponíveis:
 
-* Excel (.xlsx)
-* CSV (.txt)
+- CSV
+- TXT com delimitador `;`
+- XLSX
 
-Conteúdo exportado:
+Campos exportados:
 
-* Código
-* Nome
-* Quantidade esperada
-* Quantidade contada
-* Diferença
+| Campo | Descrição |
+| --- | --- |
+| Código | Código de barras usado no relatório |
+| Nome | Nome do produto |
+| Esperado | Quantidade esperada |
+| Contado | Quantidade contada |
+| Diferença | Contado menos esperado |
+| Status | Conferido ou Pendente |
 
----
+## Estrutura Técnica
 
-## 🔄 Fluxo do Usuário
+- Flutter
+- Provider para estado compartilhado
+- SQLite via `sqflite` para persistência local
+- `barcode_scan2` para leitura por câmera
+- `file_picker` para importação e anexos
+- `excel` e `csv` para importação/exportação
+- `share_plus` para compartilhamento de relatórios
 
-1. Importa estoque
-2. Inicia contagem
-3. Escaneia produtos ou insere manualmente
-4. Sistema atualiza quantidades automaticamente
-5. Finaliza contagem
-6. Exporta relatório
+Principais diretórios:
 
----
+```text
+lib/
+  main.dart
+  model/
+  pages/
+  repostiories/
+  service/
+test/
+```
 
-## 🧠 Regras de Negócio
+## Executando Localmente
 
-* Código de barras deve ser único
-* Scanner incrementa automaticamente a contagem
-* Código de balança deve ser interpretado automaticamente
-* Diferença = contado - esperado
-* Itens não contados ficam pendentes
+Pré-requisitos:
 
----
+- Flutter SDK compatível com Dart `>=3.4.0 <4.0.0`.
+- Android Studio ou Xcode para execução em emulador/dispositivo.
 
-## 🗄️ Modelos de Dados
+Instale as dependências:
 
-### Produto
+```bash
+flutter pub get
+```
 
-* id
-* codigoBarras
-* codigoInterno
-* nome
-* quantidadeEsperada
+Execute os testes:
 
----
+```bash
+flutter test
+```
 
-### Contagem
+Rode a análise estática:
 
-* id
-* data
-* status
+```bash
+flutter analyze
+```
 
----
+Execute no emulador ou dispositivo conectado:
 
-### ItemContagem
+```bash
+flutter run
+```
 
-* id
-* contagemId
-* produtoId
-* quantidadeContada
-* diferenca
+## Status
 
----
-
-## 💾 Persistência Local
-
-* Funciona 100% offline
-* Dados armazenados localmente
-* Preparado para sincronização futura
-
----
-
-## 📱 Telas
-
-* Importar estoque
-* Scanner de código de barras
-* Lista de produtos
-* Tela de contagem
-* Histórico
-* Exportação
-
----
-
-## 🚧 MVP
-
-### Inclui:
-
-* Importação CSV
-* Scanner de código de barras
-* Suporte a código de balança
-* Contagem automática
-* Exportação CSV
-
-### Futuro:
-
-* Excel completo
-* Backend
-* Leitor via hardware externo
-* Dashboard web
-
----
-
-## 🧪 Uso com IA
-
-Exemplos:
-
-* "Crie leitor de código de barras com mobile_scanner no Flutter"
-* "Implemente parser de código de balança EAN-13"
-* "Crie função para extrair peso de código 2xxxx"
-* "Gere tela de scanner integrada com contagem"
-
----
-
-## ⚙️ Diretrizes
-
-* Simples e rápido
-* Foco em uso operacional
-* Offline-first
-* Baixo consumo de bateria
-
----
-
-## 💡 Visão
-
-Tornar a contagem de estoque:
-
-* Rápida (via scanner)
-* Inteligente (balança automática)
-* Acessível (pequenas empresas)
-
----
-
-## 📌 Status
-
-🚧 MVP em desenvolvimento com foco em leitura de código de barras e contagem inteligente
+Projeto em desenvolvimento ativo, com foco em uso operacional offline para auditorias de estoque e conferência rápida de divergências.

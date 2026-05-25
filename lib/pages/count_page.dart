@@ -26,7 +26,7 @@ class _CountPageState extends State<CountPage> {
       }
 
       _barcodeController.text = result.rawContent;
-      await _processBarcode(result.rawContent);
+      await _prepareBarcode(result.rawContent);
     } catch (error) {
       if (!mounted) {
         return;
@@ -38,7 +38,7 @@ class _CountPageState extends State<CountPage> {
     }
   }
 
-  Future<void> _processBarcode(String barcode) async {
+  Future<void> _prepareBarcode(String barcode) async {
     final repo = context.read<ProductsRepository>();
     final scaleData = repo.parseScaleBarcode(barcode);
 
@@ -60,7 +60,10 @@ class _CountPageState extends State<CountPage> {
         return;
       }
 
-      _addCount(produto.codigoBarras, weight);
+      setState(() {
+        _barcodeController.text = produto.codigoBarras;
+        _quantityController.text = weight.toString();
+      });
       return;
     }
 
@@ -71,14 +74,47 @@ class _CountPageState extends State<CountPage> {
     }
 
     if (produto == null) {
-      _showQuickRegisterDialog(barcode);
+      _showQuickRegisterDialog(
+        barcode,
+        suggestedQuantity: _currentQuantityOrDefault(),
+      );
+      return;
+    }
+
+    setState(() {
+      _barcodeController.text = produto.codigoBarras;
+    });
+  }
+
+  Future<void> _addCurrentBarcode() async {
+    final barcode = _barcodeController.text.trim();
+    if (barcode.isEmpty) {
+      return;
+    }
+
+    final repo = context.read<ProductsRepository>();
+    final produto = await repo.getProductByBarcodeOrInternalCode(barcode);
+
+    if (!mounted) {
+      return;
+    }
+
+    if (produto == null) {
+      _showQuickRegisterDialog(
+        barcode,
+        suggestedQuantity: _currentQuantityOrDefault(),
+      );
       return;
     }
 
     _addCount(
       produto.codigoBarras,
-      double.tryParse(_quantityController.text.replaceAll(',', '.')) ?? 1,
+      _currentQuantityOrDefault(),
     );
+  }
+
+  double _currentQuantityOrDefault() {
+    return double.tryParse(_quantityController.text.replaceAll(',', '.')) ?? 1;
   }
 
   void _showQuickRegisterDialog(
@@ -120,16 +156,17 @@ class _CountPageState extends State<CountPage> {
               }
 
               final repo = context.read<ProductsRepository>();
+              final savedBarcode = suggestedInternalCode ?? barcode;
 
               await repo.insertProduct(
-                    Produto(
-                      codigoBarras: barcode,
-                      codigoInterno: internalCodeController.text.trim().isEmpty
-                          ? null
-                          : internalCodeController.text.trim(),
-                      nome: nameController.text.trim(),
-                    ),
-                  );
+                Produto(
+                  codigoBarras: savedBarcode,
+                  codigoInterno: internalCodeController.text.trim().isEmpty
+                      ? null
+                      : internalCodeController.text.trim(),
+                  nome: nameController.text.trim(),
+                ),
+              );
 
               if (!mounted) {
                 return;
@@ -140,7 +177,10 @@ class _CountPageState extends State<CountPage> {
               }
 
               Navigator.of(dialogContext).pop();
-              _addCount(barcode, suggestedQuantity);
+              setState(() {
+                _barcodeController.text = savedBarcode;
+                _quantityController.text = suggestedQuantity.toString();
+              });
             },
             child: const Text('Salvar'),
           ),
@@ -218,7 +258,7 @@ class _CountPageState extends State<CountPage> {
                             ),
                             onSubmitted: (value) async {
                               if (value.isNotEmpty) {
-                                await _processBarcode(value);
+                                await _prepareBarcode(value);
                               }
                             },
                           ),
@@ -250,7 +290,7 @@ class _CountPageState extends State<CountPage> {
                           child: OutlinedButton.icon(
                             onPressed: () async {
                               if (_barcodeController.text.isNotEmpty) {
-                                await _processBarcode(_barcodeController.text);
+                                await _addCurrentBarcode();
                               }
                             },
                             icon: const Icon(Icons.add),
@@ -275,7 +315,8 @@ class _CountPageState extends State<CountPage> {
             Expanded(
               child: _currentCount.isEmpty
                   ? const Center(
-                      child: Text('Escaneie ou informe um codigo para iniciar.'),
+                      child:
+                          Text('Escaneie ou informe um codigo para iniciar.'),
                     )
                   : ListView.builder(
                       itemCount: _currentCount.length,

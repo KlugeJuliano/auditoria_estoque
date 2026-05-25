@@ -61,27 +61,36 @@ class ProductsRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importProducts(File file) async {
+  Future<int> importProducts(File file) async {
     final extension = file.path.split('.').last.toLowerCase();
+    late final int importedCount;
 
     switch (extension) {
       case 'csv':
-        await importFromSeparatedText(file, ',');
+        importedCount = await importFromSeparatedText(
+          file,
+          _detectDelimiter(await file.readAsString()),
+        );
         break;
       case 'txt':
-        await importFromSeparatedText(file, _detectDelimiter(await file.readAsString()));
+        importedCount = await importFromSeparatedText(
+          file,
+          _detectDelimiter(await file.readAsString()),
+        );
         break;
       case 'xlsx':
-        await importFromExcel(file);
+        importedCount = await importFromExcel(file);
         break;
       default:
-        throw UnsupportedError('Formato .$extension nao suportado para importacao.');
+        throw UnsupportedError(
+            'Formato .$extension nao suportado para importacao.');
     }
 
     notifyListeners();
+    return importedCount;
   }
 
-  Future<void> importFromSeparatedText(File file, String delimiter) async {
+  Future<int> importFromSeparatedText(File file, String delimiter) async {
     final content = await file.readAsString();
     final fields = Csv(
       fieldDelimiter: delimiter,
@@ -91,10 +100,10 @@ class ProductsRepository extends ChangeNotifier {
       content,
     );
 
-    await _persistImportedRows(fields);
+    return _persistImportedRows(fields);
   }
 
-  Future<void> importFromExcel(File file) async {
+  Future<int> importFromExcel(File file) async {
     final bytes = await file.readAsBytes();
     final excel = Excel.decodeBytes(bytes);
     final sheet = excel.tables.values.firstOrNull;
@@ -109,15 +118,18 @@ class ProductsRepository extends ChangeNotifier {
         )
         .toList();
 
-    await _persistImportedRows(rows);
+    return _persistImportedRows(rows);
   }
 
-  Future<void> _persistImportedRows(List<List<dynamic>> rows) async {
-    if (rows.length <= 1) {
-      return;
+  Future<int> _persistImportedRows(List<List<dynamic>> rows) async {
+    if (rows.isEmpty) {
+      return 0;
     }
 
-    for (var index = 1; index < rows.length; index++) {
+    var importedCount = 0;
+    final startIndex = _looksLikeHeader(rows.first) ? 1 : 0;
+
+    for (var index = startIndex; index < rows.length; index++) {
       final row = rows[index];
       if (row.length < 3) {
         continue;
@@ -127,7 +139,7 @@ class ProductsRepository extends ChangeNotifier {
       final internalCode = _normalizeCell(row.elementAtOrNull(1));
       final name = _normalizeCell(row.elementAtOrNull(2));
       final expectedQty = double.tryParse(
-            _normalizeCell(row.elementAtOrNull(3), fallback: '0'),
+            _normalizeNumberCell(row.elementAtOrNull(3), fallback: '0'),
           ) ??
           0;
 
@@ -135,7 +147,7 @@ class ProductsRepository extends ChangeNotifier {
         continue;
       }
 
-      await insertProduct(
+      await _upsertProduct(
         Produto(
           codigoBarras: barcode,
           codigoInterno: internalCode.isEmpty ? null : internalCode,
@@ -143,7 +155,19 @@ class ProductsRepository extends ChangeNotifier {
           quantidadeEsperada: expectedQty,
         ),
       );
+      importedCount++;
     }
+
+    return importedCount;
+  }
+
+  Future<void> _upsertProduct(Produto produto) async {
+    final db = await _dbService.database;
+    await db.insert(
+      'produtos',
+      produto.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Map<String, dynamic>? parseScaleBarcode(String barcode) {
@@ -355,5 +379,24 @@ class ProductsRepository extends ChangeNotifier {
       return text.substring(0, text.length - 2);
     }
     return text;
+  }
+
+  String _normalizeNumberCell(dynamic value, {String fallback = ''}) {
+    return _normalizeCell(value, fallback: fallback).replaceAll(',', '.');
+  }
+
+  bool _looksLikeHeader(List<dynamic> row) {
+    final normalized =
+        row.take(4).map((cell) => _normalizeCell(cell).toLowerCase()).toList();
+
+    return normalized.any(
+      (cell) =>
+          cell.contains('codigo') ||
+          cell.contains('barcode') ||
+          cell.contains('produto') ||
+          cell.contains('nome') ||
+          cell.contains('quantidade') ||
+          cell.contains('expected'),
+    );
   }
 }
