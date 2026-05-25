@@ -1,46 +1,41 @@
 # Auditoria de Estoque
 
-Aplicativo Flutter para contagem, auditoria e conferência de estoque em operação offline. O projeto atende cenários de lojas, mercados, mercearias e equipes que precisam importar uma base atual de produtos, registrar a contagem física e exportar um relatório de divergências.
+Aplicativo Flutter para contagem e conferência de estoque em campo. O app trabalha offline, usa uma base local de produtos e gera relatórios de divergência entre o estoque esperado e a quantidade contada.
 
-## Recursos
+## Escopo
 
-- Importação de produtos por CSV, TXT ou XLSX.
-- Cadastro rápido de produtos não encontrados durante a contagem.
-- Leitura de código de barras pela câmera.
-- Suporte a códigos de balança EAN-13 com prefixos `20` a `29`.
-- Contagem manual com quantidade informada pelo operador.
-- Comparação entre quantidade esperada e quantidade contada.
-- Checklist de auditoria, observações e anexos de fotos.
-- Histórico local de auditorias finalizadas.
-- Reexportação de auditorias já concluídas.
-- Exportação em CSV, TXT e XLSX.
-- Funcionamento offline com persistência local em SQLite.
+O projeto cobre o fluxo básico de auditoria:
 
-## Fluxo de Uso
+- importação da base de produtos do cliente;
+- contagem por código digitado ou lido pela câmera;
+- tratamento de etiquetas de balança;
+- revisão de divergências;
+- registro de checklist, observações e fotos;
+- histórico das auditorias concluídas;
+- exportação do relatório em CSV, TXT ou XLSX.
 
-1. Importe o cadastro atual de estoque do cliente em `Ajustes`.
-2. Inicie a contagem pela aba `Contagem`.
-3. Leia o código pela câmera ou digite o código manualmente.
-4. Informe a quantidade contada no campo `QTD`.
-5. Toque em `Adicionar` para registrar o item na sessão.
-6. Finalize a contagem para revisar divergências.
-7. Preencha checklist, observações e fotos, se necessário.
-8. Exporte o relatório em CSV, TXT ou XLSX.
+Os dados ficam armazenados localmente em SQLite.
 
-## Importação de Produtos
+## Importação da Base de Produtos
 
-A importação aceita arquivos `.csv`, `.txt` e `.xlsx`. Para CSV e TXT, o delimitador é detectado automaticamente entre vírgula, ponto e vírgula e tabulação.
+A importação é feita pela aba `Ajustes`. Os formatos aceitos são:
 
-Colunas esperadas:
+- `.csv`
+- `.txt`
+- `.xlsx`
 
-| Coluna | Descrição | Obrigatória |
-| --- | --- | --- |
-| Código de barras | Identificador principal do produto | Sim |
-| Código interno | Código interno usado pelo cliente ou balança | Não |
-| Nome | Nome do produto | Sim |
-| Quantidade esperada | Estoque atual esperado | Não |
+Para arquivos texto, o delimitador é detectado automaticamente entre vírgula, ponto e vírgula e tabulação.
 
-Exemplo com ponto e vírgula:
+### Layout Esperado
+
+| Posição | Campo | Obrigatório | Observação |
+| --- | --- | --- | --- |
+| 1 | Código de barras | Sim | Chave principal do produto |
+| 2 | Código interno | Não | Usado também para etiquetas de balança |
+| 3 | Nome | Sim | Nome exibido na contagem e nos relatórios |
+| 4 | Quantidade esperada | Não | Aceita decimal com vírgula ou ponto |
+
+Exemplo:
 
 ```csv
 codigo_barras;codigo_interno;nome;quantidade_esperada
@@ -48,53 +43,67 @@ codigo_barras;codigo_interno;nome;quantidade_esperada
 7899876543210;67890;Feijao Carioca;24
 ```
 
-Observações:
+Arquivos com ou sem cabeçalho são aceitos. Linhas sem código de barras ou sem nome são ignoradas. Quando um produto já existe, o registro é atualizado pelo código de barras.
 
-- Arquivos com ou sem cabeçalho são aceitos.
-- Quantidades decimais podem usar vírgula ou ponto.
-- Produtos existentes são atualizados pelo código de barras.
-- Linhas sem código de barras ou sem nome são ignoradas.
+## Contagem
 
-## Contagem e Scanner
+A contagem é feita na aba `Contagem`.
 
-O scanner não registra quantidade automaticamente. Ao ler um produto, o app prepara o código no formulário. O operador deve conferir ou informar a quantidade e tocar em `Adicionar`.
+Ao ler ou digitar um código, o app apenas localiza o produto e preenche o formulário. A quantidade não é lançada automaticamente. O operador deve informar a quantidade no campo `QTD` e confirmar em `Adicionar`.
 
-Esse comportamento evita lançamentos acidentais e permite contagens por caixa, fardo, peso ou qualquer unidade operacional usada pelo cliente.
+Se o produto não existir na base, o app abre um cadastro rápido. Após salvar, a quantidade informada no campo `QTD` é preservada para lançamento.
 
-## Código de Balança
+## Etiquetas de Balança
 
-O aplicativo interpreta códigos EAN-13 de balança com prefixos `20` a `29`.
+O app reconhece códigos EAN-13 com prefixos `20` a `29`.
 
-Formato interpretado:
+Formato usado na leitura:
 
 ```text
 PP CCCCC QQQQQ D
 ```
 
-- `PP`: prefixo da balança.
-- `CCCCC`: código interno do produto.
-- `QQQQQ`: peso em gramas, convertido para quilogramas.
-- `D`: dígito final do código.
+| Trecho | Descrição |
+| --- | --- |
+| `PP` | Prefixo da balança |
+| `CCCCC` | Código interno do produto |
+| `QQQQQ` | Peso em gramas |
+| `D` | Dígito final |
 
-Exemplo:
+Exemplo: `2012345007508`
 
-```text
-2012345007508
-```
+Interpretação:
 
-Resultado:
+- código interno: `12345`
+- quantidade: `0.750`
 
-- Prefixo: `20`
-- Código interno: `12345`
-- Peso: `0.750`
+## Auditoria e Exportação
 
-## Auditoria e Histórico
+Ao finalizar uma contagem, o app monta um relatório com:
 
-Ao finalizar uma contagem, o aplicativo gera um relatório com todos os produtos importados e os itens contados que não estavam na base original. Cada item recebe quantidade esperada, quantidade contada, diferença e status.
+- produtos cadastrados na base;
+- itens contados que não estavam vinculados à base;
+- quantidade esperada;
+- quantidade contada;
+- diferença;
+- status.
 
-Auditorias finalizadas ficam disponíveis no histórico, com detalhe dos itens, checklist, observações, fotos anexadas e opção de reexportação.
+Antes da exportação, é possível preencher checklist, observações e anexar fotos. A contagem é salva no histórico após a exportação ser concluída com sucesso.
 
-## Exportação
+Auditorias já fechadas podem ser abertas pelo histórico e exportadas novamente sem gerar uma nova contagem.
+
+## Relatório
+
+Campos exportados:
+
+| Campo | Origem |
+| --- | --- |
+| Código | Código de barras do produto ou código informado na contagem |
+| Nome | Nome cadastrado ou `Desconhecido` |
+| Esperado | Quantidade esperada na base |
+| Contado | Quantidade lançada na sessão |
+| Diferença | `contado - esperado` |
+| Status | `Conferido` ou `Pendente` |
 
 Formatos disponíveis:
 
@@ -102,28 +111,7 @@ Formatos disponíveis:
 - TXT com delimitador `;`
 - XLSX
 
-Campos exportados:
-
-| Campo | Descrição |
-| --- | --- |
-| Código | Código de barras usado no relatório |
-| Nome | Nome do produto |
-| Esperado | Quantidade esperada |
-| Contado | Quantidade contada |
-| Diferença | Contado menos esperado |
-| Status | Conferido ou Pendente |
-
-## Estrutura Técnica
-
-- Flutter
-- Provider para estado compartilhado
-- SQLite via `sqflite` para persistência local
-- `barcode_scan2` para leitura por câmera
-- `file_picker` para importação e anexos
-- `excel` e `csv` para importação/exportação
-- `share_plus` para compartilhamento de relatórios
-
-Principais diretórios:
+## Estrutura do Projeto
 
 ```text
 lib/
@@ -135,37 +123,46 @@ lib/
 test/
 ```
 
-## Executando Localmente
+Principais dependências:
 
-Pré-requisitos:
+- `provider`
+- `sqflite`
+- `barcode_scan2`
+- `file_picker`
+- `excel`
+- `csv`
+- `image_picker`
+- `share_plus`
 
-- Flutter SDK compatível com Dart `>=3.4.0 <4.0.0`.
-- Android Studio ou Xcode para execução em emulador/dispositivo.
+## Desenvolvimento
 
-Instale as dependências:
+Instalar dependências:
 
 ```bash
 flutter pub get
 ```
 
-Execute os testes:
-
-```bash
-flutter test
-```
-
-Rode a análise estática:
+Executar análise estática:
 
 ```bash
 flutter analyze
 ```
 
-Execute no emulador ou dispositivo conectado:
+Executar testes:
+
+```bash
+flutter test
+```
+
+Executar no dispositivo ou emulador:
 
 ```bash
 flutter run
 ```
 
-## Status
+## Observações
 
-Projeto em desenvolvimento ativo, com foco em uso operacional offline para auditorias de estoque e conferência rápida de divergências.
+- O app foi desenhado para operação offline.
+- A base local usa SQLite.
+- O caminho `lib/repostiories` contém um erro de grafia mantido por enquanto para evitar uma renomeação ampla dos imports.
+- O schema atual do banco está na versão `2`.
