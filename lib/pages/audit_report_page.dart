@@ -30,6 +30,7 @@ class _AuditReportPageState extends State<AuditReportPage> {
   };
   final List<String> _photoPaths = [];
   final ImagePicker _imagePicker = ImagePicker();
+  int? _savedContagemId;
 
   @override
   void dispose() {
@@ -101,18 +102,6 @@ class _AuditReportPageState extends State<AuditReportPage> {
       );
 
       final reportData = await repo.buildReportData(widget.currentCount);
-      await repo.saveContagem(
-        widget.currentCount,
-        observacoes: _notesController.text.trim(),
-        checklist: _checklistAnswers.entries
-            .map((entry) => {
-                  'question': entry.key,
-                  'answer': entry.value,
-                })
-            .toList(),
-        photoPaths: _photoPaths,
-      );
-
       final directory = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
@@ -153,6 +142,22 @@ class _AuditReportPageState extends State<AuditReportPage> {
       }
 
       if (result.status == ShareResultStatus.success) {
+        _savedContagemId ??= await repo.saveContagem(
+          widget.currentCount,
+          observacoes: _notesController.text.trim(),
+          checklist: _checklistAnswers.entries
+              .map((entry) => {
+                    'question': entry.key,
+                    'answer': entry.value,
+                  })
+              .toList(),
+          photoPaths: _photoPaths,
+        );
+
+        if (!mounted) {
+          return;
+        }
+
         messenger.showSnackBar(
           const SnackBar(content: Text('Exportacao concluida com sucesso!')),
         );
@@ -191,9 +196,8 @@ class _AuditReportPageState extends State<AuditReportPage> {
           final total = data.length;
           final pendentes =
               data.where((item) => item['status'] == 'Pendente').length;
-          final divergencias = data
-              .where((item) => (item['diferenca'] as num).abs() > 0)
-              .length;
+          final divergencias =
+              data.where((item) => (item['diferenca'] as num).abs() > 0).length;
 
           return ListView(
             padding: const EdgeInsets.all(16),

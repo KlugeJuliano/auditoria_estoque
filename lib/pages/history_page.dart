@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:auditoria/repostiories/products_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class HistoryPage extends StatelessWidget {
   const HistoryPage({super.key});
@@ -94,8 +96,8 @@ class HistoryDetailPage extends StatelessWidget {
 
           final checklist = _decodeStringMapList(entry['checklistJson']);
           final photos = _decodeStringList(entry['fotosJson']);
-          final items =
-              (entry['items'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+          final items = (entry['items'] as List<dynamic>? ?? const [])
+              .cast<Map<String, dynamic>>();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -108,7 +110,8 @@ class HistoryDetailPage extends StatelessWidget {
                   ),
                 ),
               if (checklist.isNotEmpty) ...[
-                Text('Checklist', style: Theme.of(context).textTheme.titleMedium),
+                Text('Checklist',
+                    style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 ...checklist.map(
                   (item) => Card(
@@ -156,11 +159,118 @@ class HistoryDetailPage extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => _exportHistory(
+                  context,
+                  items,
+                  ExportFileFormat.csv,
+                ),
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Exportar CSV'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _exportHistory(
+                  context,
+                  items,
+                  ExportFileFormat.txt,
+                ),
+                icon: const Icon(Icons.description_outlined),
+                label: const Text('Exportar TXT'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _exportHistory(
+                  context,
+                  items,
+                  ExportFileFormat.xlsx,
+                ),
+                icon: const Icon(Icons.table_chart_outlined),
+                label: const Text('Exportar XLSX'),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _exportHistory(
+    BuildContext context,
+    List<Map<String, dynamic>> items,
+    ExportFileFormat format,
+  ) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = context.read<ProductsRepository>();
+
+    try {
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final exportItems = items
+          .map(
+            (item) => {
+              'barcode': item['codigoBarras'],
+              'nome': item['nomeProduto'],
+              'esperado': item['quantidadeEsperada'],
+              'contado': item['quantidadeContada'],
+              'diferenca': item['diferenca'],
+              'status': item['status'],
+            },
+          )
+          .toList();
+      final directory = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+
+      late final File file;
+      switch (format) {
+        case ExportFileFormat.csv:
+          file =
+              File('${directory.path}/contagem_${contagemId}_$timestamp.csv');
+          await file.writeAsString(await repo.exportToCsv(exportItems));
+          break;
+        case ExportFileFormat.txt:
+          file =
+              File('${directory.path}/contagem_${contagemId}_$timestamp.txt');
+          await file.writeAsString(
+            await repo.exportToCsv(exportItems, delimiter: ';'),
+          );
+          break;
+        case ExportFileFormat.xlsx:
+          file =
+              File('${directory.path}/contagem_${contagemId}_$timestamp.xlsx');
+          await file.writeAsBytes(await repo.exportToExcel(exportItems));
+          break;
+      }
+
+      if (!context.mounted) {
+        return;
+      }
+
+      navigator.pop();
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Relatorio de Auditoria de Estoque #$contagemId',
+          text: 'Relatorio exportado em ${format.name.toUpperCase()}',
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Erro ao exportar: $error')),
+      );
+    }
   }
 
   List<Map<String, String>> _decodeStringMapList(dynamic source) {

@@ -60,6 +60,12 @@ class DatabaseService {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
+          await _addColumnIfNotExists(
+            db,
+            'produtos',
+            'quantidadeEsperada',
+            'REAL',
+          );
           await _addColumnIfNotExists(db, 'contagens', 'observacoes', 'TEXT');
           await _addColumnIfNotExists(
             db,
